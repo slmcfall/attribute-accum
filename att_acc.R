@@ -32,18 +32,24 @@ y <- catch.df[catch.df$NextDownID==3,]
 
 y["HydroID"][[1]]  # capture one column's values
 
+### start dictionary here ###
+
 for (id in hydroids) {
-      
+  
+  ### attach the id as key for the dictionary ###
+  # this needs to be a string, use toString()
+  
+  # initialize iterative vector/"stack"    
   hydroidNext <- c(id)
-  hydroidUsed <- c(id)
-      
+  hydroidUsed <- c()
+
   # get top of stack
   top <- hydroidNext[[1]]
 
   # get hydroids that are upstream
   upstream <- bare.df[bare.df$NextDownID==top,]
+  
   if (id==3) {
-    
     # capture and append upstream id's
     c <- 1
     while (c < length(upstream)) {
@@ -65,11 +71,40 @@ for (id in hydroids) {
     }}
 }
 
+megalist <- list()
+for (id in hydroids) {
+  
+  
+}
+
+#############################
+id <- 27
+nextdownids <- bare.df[bare.df$NextDownID==id,]
+ndiList <- as.list(nextdownids)
 
 
 
 
 
+
+
+
+
+#############################
+megalist <- list()
+
+id <- 27
+idname <- toString(id)
+nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
+linkedlist <- list(nextdownids)
+names(linkedlist) <- idname
+megalist <- c(megalist,linkedlist)
+megalist$`idname`
+
+id2 <- 26
+nextdownids2 <- as.vector(bare.df[bare.df$NextDownID==id2,]$HydroID)
+linkedlist2 <- list(c(id2,nextdownids2))
+megalist <- c(megalist,linkedlist2)
 
 
 
