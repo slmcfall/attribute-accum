@@ -71,11 +71,6 @@ for (id in hydroids) {
     }}
 }
 
-megalist <- list()
-for (id in hydroids) {
-  
-  
-}
 
 #############################
 id <- 27
@@ -99,12 +94,32 @@ nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
 linkedlist <- list(nextdownids)
 names(linkedlist) <- idname
 megalist <- c(megalist,linkedlist)
-megalist$`idname`
+megalist[idname]
 
 id2 <- 26
 nextdownids2 <- as.vector(bare.df[bare.df$NextDownID==id2,]$HydroID)
 linkedlist2 <- list(c(id2,nextdownids2))
 megalist <- c(megalist,linkedlist2)
 
+getNode <- function(id) {
+  
+  idname <- toString(id)
+  nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
+  linkedlist <- list(nextdownids)
+  names(linkedlist) <- idname
+  
+  return(linkedlist)
+}
 
+megalist <- list()
+for (id in hydroids) {
+  node <- getNode(id)
+  megalist <- c(megalist,node)
+}
+
+for (thing in megalist) {
+  if (length(thing) != 0) {
+    print (thing)
+  }
+}
 
