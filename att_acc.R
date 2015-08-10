@@ -134,6 +134,7 @@ for (item in names(megalist)) {
   names(appList) <- idname
   upstreamList <- c(upstreamList, appList)
 }
+
 print (upstreamList)
 
 
