@@ -72,36 +72,22 @@ for (id in hydroids) {
 }
 
 
-#############################
+############################# SNIPPETS
 id <- 27
 nextdownids <- bare.df[bare.df$NextDownID==id,]
 ndiList <- as.list(nextdownids)
 
-
-
-
-
-
-
-
+# dealing with nodes that have no neighbors
+for (thing in megalist) {
+  if (length(thing) != 0) {
+    print (thing)
+  }
+}
 
 #############################
-megalist <- list()
 
-id <- 27
-idname <- toString(id)
-nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
-linkedlist <- list(nextdownids)
-names(linkedlist) <- idname
-megalist <- c(megalist,linkedlist)
-megalist[idname]
-
-id2 <- 26
-nextdownids2 <- as.vector(bare.df[bare.df$NextDownID==id2,]$HydroID)
-linkedlist2 <- list(c(id2,nextdownids2))
-megalist <- c(megalist,linkedlist2)
-
-getNode <- function(id) {
+# get a units upstream neighbors
+connectNode <- function(id) {
   
   idname <- toString(id)
   nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
@@ -111,15 +97,46 @@ getNode <- function(id) {
   return(linkedlist)
 }
 
+# create list of all nodes and the nodes corresponding neighbors
 megalist <- list()
 for (id in hydroids) {
-  node <- getNode(id)
+  node <- connectNode(id)
   megalist <- c(megalist,node)
 }
 
-for (thing in megalist) {
-  if (length(thing) != 0) {
-    print (thing)
+node3 <- megalist["3"]
+node27 <- megalist["27"]
+
+upstreamList <- list()
+
+for (item in names(megalist)) {
+
+  finalList <- c()
+  nextList  <- c()
+  adjNodes  <- megalist[item][[1]]
+  
+  nextList <- c(nextList, adjNodes)
+
+  while (length(nextList) != 0) {
+    for (node in nextList) {
+      neighborNodes <- megalist[toString(node)][[1]]
+      # remove node from nextList
+      finalList <- c(finalList, nextList[1])
+      nextList <- nextList[-1]
+      if (length(neighborNodes) != 0) {
+        nextList <- c(nextList,neighborNodes)
+      }
+    }
   }
+  
+  idname <- item
+  appList <- list(finalList)
+  names(appList) <- idname
+  upstreamList <- c(upstreamList, appList)
 }
+print (upstreamList)
+
+
+
+
 
