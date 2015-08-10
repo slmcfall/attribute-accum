@@ -24,68 +24,6 @@ nextids <- catch.df$NextDownID
 # make them into a dataframe
 bare.df <- catch.df[,c("HydroID","NextDownID")]
 
-# iterate over hydroids to find applicable upstream chunks
-
-# how to capture a single value
-# should definitely make this a function
-y <- catch.df[catch.df$NextDownID==3,]
-
-y["HydroID"][[1]]  # capture one column's values
-
-### start dictionary here ###
-
-for (id in hydroids) {
-  
-  ### attach the id as key for the dictionary ###
-  # this needs to be a string, use toString()
-  
-  # initialize iterative vector/"stack"    
-  hydroidNext <- c(id)
-  hydroidUsed <- c()
-
-  # get top of stack
-  top <- hydroidNext[[1]]
-
-  # get hydroids that are upstream
-  upstream <- bare.df[bare.df$NextDownID==top,]
-  
-  if (id==3) {
-    # capture and append upstream id's
-    c <- 1
-    while (c < length(upstream)) {
-      # capture upstream id
-      upstreamAppend <- upstream["HydroID"][[c]]
-      # append upstream id
-      hydroidNext <- c(hydroidNext, upstreamAppend)
-      # remove any repeated values
-      hydroidNext <- unique(hydroidNext)
-      c = c + 1
-    
-    # append used hydroid to Used list
-    hydroidUsed <- c(hydroidUsed, top)
-      
-    # append used hydroid from Next list
-    hydroidNext <- hydroidNext[-1]
-    
-    print (hydroidNext)
-    }}
-}
-
-
-############################# SNIPPETS
-id <- 27
-nextdownids <- bare.df[bare.df$NextDownID==id,]
-ndiList <- as.list(nextdownids)
-
-# dealing with nodes that have no neighbors
-for (thing in megalist) {
-  if (length(thing) != 0) {
-    print (thing)
-  }
-}
-
-#############################
-
 # get a units upstream neighbors
 connectNode <- function(id) {
   
@@ -97,7 +35,9 @@ connectNode <- function(id) {
   return(linkedlist)
 }
 
+#
 # create list of all nodes and the nodes corresponding neighbors
+#
 megalist <- list()
 for (id in hydroids) {
   node <- connectNode(id)
@@ -135,7 +75,64 @@ for (item in names(megalist)) {
   upstreamList <- c(upstreamList, appList)
 }
 
+names(upstreamList) <- names(megalist)
 print (upstreamList)
+
+#
+# create data frames list with accumulative nodes of each node
+#
+
+df.list <- list()
+for (item in upstreamList) {
+  df.list <- c(df.list, list((catch.df[catch.df$HydroID %in% item,])))
+}
+# assign correct names
+names(df.list) <- names(megalist)
+
+# calculate new columns
+df.27 <- df.list['27'][[1]]
+
+df.27$mulField <- 2
+
+df.27$resField <- with(df.27, Shape_Leng * mulField)
+
+
+
+
+
+
+
+############################# SNIPPETS
+
+# how to capture a single value
+# should definitely make this a function
+y <- catch.df[catch.df$NextDownID==3,]
+
+y["HydroID"][[1]]  # capture one column's values
+
+
+id <- 27
+nextdownids <- bare.df[bare.df$NextDownID==id,]
+ndiList <- as.list(nextdownids)
+
+# dealing with nodes that have no neighbors
+for (thing in megalist) {
+  if (length(thing) != 0) {
+    print (thing)
+  }
+}
+
+
+catch.df[catch.df$HydroID %in% node5[[1]],]
+
+# creates vector in column format 
+hello.df <- ifelse(catch.df$HydroID>5, TRUE, FALSE)
+
+#############################
+
+
+
+
 
 
 
