@@ -3,56 +3,56 @@
 # PURPOSE: accumulate upstream attributes
 #
 
+# LIBRARIES
 library(sp)
 library(rgdal)
 library(rgeos)
 
-# load in catchment example
-# catch_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\catchment"
-catch_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\huc12_upperBear_join"
-catch_name <- basename(catch_path)
-catch_dir <- dirname(catch_path)
+# FUNCTIONS
+functions_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\functions.R"
+source(functions_path)
 
-catch <- readOGR(dsn = catch_dir, layer = catch_name)
+  ###          ###
+ # Begin script #
+###          ###
+
+#
+# 1. Data Prep
+#
+
+# load shapefile
+path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\huc12_upperBear_join"
+shpfile <- loadShpfile(path)
 
 # convert to data frame
-catch.df <- as.data.frame(catch)
+catch.df <- as.data.frame(shpfile)
+
+# MAJSTAT STUFF
+# create list of majstat polygons to iterate over
+majstat.df <- catch.df[c("MAJORITY")]
+majstat.list <- unique(as.list(majstat.df)[[1]])
+
+aqi.list <- list()
+
+#might need to remove zeroes, as they may be nulls
 
 # get one majority stats group
-catch.df <- catch.df[catch.df$MAJORITY==8,]
+catch.df.filter <- catch.df[catch.df$MAJORITY==1,]
 
 # capture hydroid's, our iterator
-hydroids <- catch.df$HUC12
-nextids <- catch.df$ToHUC
+hydroids <- getHydroIDs(catch.df.filter,"HUC12")
 
-# make them into a dataframe
-bare.df <- catch.df[,c("HUC12","ToHUC")]
-
-# get a units upstream neighbors
-connectNode <- function(id) {
-  
-  idname <- toString(id)
-  nextdownids <- as.vector(bare.df[bare.df$ToHUC==id,]$HUC12)
-  linkedlist <- list(nextdownids)
-  names(linkedlist) <- idname
-  
-  return(linkedlist)
-}
+# create smaller df to pull from
+bare.df <- createHUCdf(catch.df.filter, "HUC12", "ToHUC")
 
 #
-# create list of all nodes and the nodes corresponding neighbors
+# 2. Tree Creation
 #
-megalist <- list()
-for (id in hydroids) {
-  node <- connectNode(id)
-  megalist <- c(megalist,node)
-}
 
-node3 <- megalist["3"]
-node27 <- megalist["27"]
+# create list of all hydroids and their adjacent hydroids
+megalist <- createAdjList(hydroids)
 
 upstreamList <- list()
-
 for (item in names(megalist)) {
 
   finalList <- c()
@@ -71,6 +71,7 @@ for (item in names(megalist)) {
         nextList <- c(nextList,neighborNodes)
       }
     }
+    print (length(nextList))
   }
   
   idname <- item
@@ -80,30 +81,39 @@ for (item in names(megalist)) {
 }
 
 names(upstreamList) <- names(megalist)
-print (upstreamList)
 
 #
-# create data frames list with accumulative nodes of each node
+# 3. Connect Nodes to Data Frames
 #
 
 df.list <- list()
 for (item in upstreamList) {
-  df.list <- c(df.list, list((catch.df[catch.df$HUC12 %in% item,])))
+  df.list <- c(df.list, list((catch.df.filter[catch.df.filter$HUC12 %in% item,])))
 }
+
 # assign correct names
 names(df.list) <- names(megalist)
 
-# end node
-endNode <- df.list$`160101010201`
+#
+# 4. Calculate Accumulative AQI
+#
 
-# multiply 30m cell count by 30 to change length to meters
-endNode$StreamLength <- with(endNode, SUM * 30)
+# find longest data frame in list of data frames
+# this is the node that all nodes feed into, ostensibly
+endNode <- findLongestDf(df.list)
+#endNode <- df.list$`160101020303`
 
+
+# !!! SUM is stream length in 30m cells!
+# ...which means any diagonally connected cells aren't 1*30m but sqrt(2)*30m
 # intermediate calculation for attribute accumulation
-endNode$AQILength <- with(endNode, StreamLength * MEAN)
+endNode$StreamLength <- endNode[c('SUM')]
+endNode$AQI <- endNode[c('MEAN')]
+endNode$AQILength <- with(endNode, StreamLength * AQI)
 
 accAQI <- sum(endNode$AQILength) / sum(endNode$StreamLength)
 
+print(accAQI)
 
 
 ############################# SNIPPETS
@@ -138,6 +148,11 @@ df.27 <- df.list['27'][[1]]
 df.27$mulField <- 2
 
 df.27$resField <- with(df.27, Shape_Leng * mulField)
+
+
+
+node3 <- megalist["3"]
+node27 <- megalist["27"]
 
 #############################
 
