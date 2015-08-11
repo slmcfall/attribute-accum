@@ -8,7 +8,8 @@ library(rgdal)
 library(rgeos)
 
 # load in catchment example
-catch_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\catchment"
+# catch_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\catchment"
+catch_path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\huc12_upperBear_join"
 catch_name <- basename(catch_path)
 catch_dir <- dirname(catch_path)
 
@@ -17,18 +18,21 @@ catch <- readOGR(dsn = catch_dir, layer = catch_name)
 # convert to data frame
 catch.df <- as.data.frame(catch)
 
+# get one majority stats group
+catch.df <- catch.df[catch.df$MAJORITY==8,]
+
 # capture hydroid's, our iterator
-hydroids <- catch.df$HydroID
-nextids <- catch.df$NextDownID
+hydroids <- catch.df$HUC12
+nextids <- catch.df$ToHUC
 
 # make them into a dataframe
-bare.df <- catch.df[,c("HydroID","NextDownID")]
+bare.df <- catch.df[,c("HUC12","ToHUC")]
 
 # get a units upstream neighbors
 connectNode <- function(id) {
   
   idname <- toString(id)
-  nextdownids <- as.vector(bare.df[bare.df$NextDownID==id,]$HydroID)
+  nextdownids <- as.vector(bare.df[bare.df$ToHUC==id,]$HUC12)
   linkedlist <- list(nextdownids)
   names(linkedlist) <- idname
   
@@ -84,21 +88,21 @@ print (upstreamList)
 
 df.list <- list()
 for (item in upstreamList) {
-  df.list <- c(df.list, list((catch.df[catch.df$HydroID %in% item,])))
+  df.list <- c(df.list, list((catch.df[catch.df$HUC12 %in% item,])))
 }
 # assign correct names
 names(df.list) <- names(megalist)
 
-# calculate new columns
-df.27 <- df.list['27'][[1]]
+# end node
+endNode <- df.list$`160101010201`
 
-df.27$mulField <- 2
+# multiply 30m cell count by 30 to change length to meters
+endNode$StreamLength <- with(endNode, SUM * 30)
 
-df.27$resField <- with(df.27, Shape_Leng * mulField)
+# intermediate calculation for attribute accumulation
+endNode$AQILength <- with(endNode, StreamLength * MEAN)
 
-
-
-
+accAQI <- sum(endNode$AQILength) / sum(endNode$StreamLength)
 
 
 
@@ -127,6 +131,13 @@ catch.df[catch.df$HydroID %in% node5[[1]],]
 
 # creates vector in column format 
 hello.df <- ifelse(catch.df$HydroID>5, TRUE, FALSE)
+
+# calculate new columns
+df.27 <- df.list['27'][[1]]
+
+df.27$mulField <- 2
+
+df.27$resField <- with(df.27, Shape_Leng * mulField)
 
 #############################
 
