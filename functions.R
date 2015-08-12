@@ -53,3 +53,21 @@ findLongestDf <- function(df_list) {
   }
   return (df.max)
 }
+
+findLongestDf <- function(df_list) {
+  # get first data frame in list of data frames
+  first.df <- df_list[[1]]
+  # get the number of rows in the first data frame
+  first.length <- length(first.df[[1]])
+  # set the highest number df as the first
+  df.max <- first.df
+  # determine the df with the most rows
+  for (df in df_list) {
+    length.df <- (length(df[[1]]))
+    if (length.df > first.length) {
+      first.length <- length.df
+      df.max <- df
+    }
+  }
+  return (df.max)
+}
