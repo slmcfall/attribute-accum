@@ -30,21 +30,26 @@ catch.df <- as.data.frame(shpfile)
 # MAJSTAT STUFF
 # create list of majstat polygons to iterate over
 majstat.df <- catch.df[c("MAJORITY")]
-# remove repeated majstat groups
-majstat.list <- unique(as.list(majstat.df)[[2]])
+# get majstat list
+majstat.list <- as.list(majstat.df)[[1]]
+# remove repeated values
+majstat.unique <- unique(majstat.list)
 # remove null majstat groups
-majstat.list <- majstat.list[majstat.list != 0]
+majstat.unique <- majstat.unique[majstat.unique != 0]
 
-aqi.list <- list()
+accAQI.vec <- c()
+majstat.vec <- c()
 
-for (majstat in majstat.list){
+for (majstat in majstat.unique){
 
   # get one majority stats group
   catch.df.filter <- catch.df[catch.df$MAJORITY==majstat,]
   nrows.filter <- nrow(catch.df.filter)
   
-  
   if (nrows.filter > 1) {
+    # add majstat category to vector list for final data frame
+    majstat.vec <- c(majstat.vec, majstat)
+    
     # capture hydroid's, our iterator
     hydroids <- getHydroIDs(catch.df.filter,"HUC12")
     
@@ -120,19 +125,23 @@ for (majstat in majstat.list){
     # this is the node that all nodes feed into, ostensibly
     df.max <- findLongestDf(df.list)
     
-    #endNode <- findLongestDf(df.list)
-    endNode <- df.max
+    #end.node <- findLongestDf(df.list)
+    end.node <- df.max
     
     # !!! SUM is stream length in 30m cells!
     # ...which means any diagonally connected cells aren't 1*30m but sqrt(2)*30m
     # intermediate calculation for attribute accumulation
-    endNode$StreamLength <- endNode[c('SUM')]
-    endNode$AQI <- endNode[c('MEAN')]
-    endNode$AQILength <- with(endNode, StreamLength * AQI)
+    end.node$StreamLength <- end.node[c('SUM')]
+    end.node$AQI <- end.node[c('MEAN')]
+    end.node$AQILength <- with(end.node, StreamLength * AQI)
     
-    accAQI <- sum(endNode$AQILength) / sum(endNode$StreamLength)
+    accAQI <- sum(end.node$AQILength) / sum(end.node$StreamLength)
     
-    print(accAQI)
+    accAQI.vec <- c(accAQI.vec,accAQI)
   
   }  # number of rows if statment
 }  # majstat for loop
+
+accAQI.df <- data.frame(majstat.vec,accAQI.vec)
+
+
