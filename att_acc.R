@@ -143,5 +143,14 @@ for (majstat in majstat.unique){
 }  # majstat for loop
 
 accAQI.df <- data.frame(majstat.vec,accAQI.vec)
+names(accAQI.df) <- c("MAJORITY","accAQI")
+
+catch.df2 <- catch.df
+
+final.df <- merge(catch.df2, accAQI.df, by="MAJORITY")
+
+
+
+
 
 
