@@ -30,14 +30,14 @@ catch.df <- as.data.frame(shpfile)
 # MAJSTAT STUFF
 # create list of majstat polygons to iterate over
 majstat.df <- catch.df[c("MAJORITY")]
-majstat.list <- unique(as.list(majstat.df)[[1]])
+majstat.list <- unique(as.list(majstat.df)[[2]])
 
 aqi.list <- list()
 
 #might need to remove zeroes, as they may be nulls
 
 # get one majority stats group
-catch.df.filter <- catch.df[catch.df$MAJORITY==1,]
+catch.df.filter <- catch.df[catch.df$MAJORITY==3,]
 
 # capture hydroid's, our iterator
 hydroids <- getHydroIDs(catch.df.filter,"HUC12")
@@ -60,18 +60,21 @@ for (item in names(megalist)) {
   adjNodes  <- megalist[item][[1]]
   
   nextList <- c(nextList, adjNodes)
+  print(length(nextList))
 
   while (length(nextList) != 0) {
     for (node in nextList) {
+      #browser()
       neighborNodes <- megalist[toString(node)][[1]]
       # remove node from nextList
       finalList <- c(finalList, nextList[1])
       nextList <- nextList[-1]
+      
       if (length(neighborNodes) != 0) {
         nextList <- c(nextList,neighborNodes)
+        
       }
     }
-    print (length(nextList))
   }
   
   idname <- item
@@ -82,12 +85,22 @@ for (item in names(megalist)) {
 
 names(upstreamList) <- names(megalist)
 
+# add in original nodes for each node in upstreamList
+allstreamList <- list()
+index <- 1
+for (node in upstreamList) {
+  origNode <- (names(upstreamList)[index])
+  node <- list(c(node, origNode))
+  allstreamList <- c(allstreamList,node)
+  index <- index + 1
+}
+
 #
 # 3. Connect Nodes to Data Frames
 #
 
 df.list <- list()
-for (item in upstreamList) {
+for (item in allstreamList) {
   df.list <- c(df.list, list((catch.df.filter[catch.df.filter$HUC12 %in% item,])))
 }
 
@@ -100,9 +113,26 @@ names(df.list) <- names(megalist)
 
 # find longest data frame in list of data frames
 # this is the node that all nodes feed into, ostensibly
-endNode <- findLongestDf(df.list)
-#endNode <- df.list$`160101020303`
 
+df_list <- df.list
+
+# get first data frame in list of data frames
+first.df <- df_list[[1]]
+# get the number of rows in the first data frame
+first.length <- length(first.df[[1]])
+# set the highest number df as the first
+df.max <- first.df
+# determine the df with the most rows
+for (df in df_list) {
+  length.df <- (length(df[[1]]))
+  if (length.df > first.length) {
+    first.length <- length.df
+    df.max <- df
+  }
+}
+
+#endNode <- findLongestDf(df.list)
+endNode <- df.max
 
 # !!! SUM is stream length in 30m cells!
 # ...which means any diagonally connected cells aren't 1*30m but sqrt(2)*30m
