@@ -27,6 +27,8 @@ shpfile <- loadShpfile(path)
 # convert to data frame
 catch.df <- as.data.frame(shpfile)
 
+catch.df$ID <- 1:nrow(catch.df)
+
 # MAJSTAT STUFF
 # create list of majstat polygons to iterate over
 majstat.df <- catch.df[c("MAJORITY")]
@@ -41,7 +43,7 @@ accAQI.vec <- c()
 majstat.vec <- c()
 
 for (majstat in majstat.unique){
-
+  
   # get one majority stats group
   catch.df.filter <- catch.df[catch.df$MAJORITY==majstat,]
   nrows.filter <- nrow(catch.df.filter)
@@ -65,13 +67,13 @@ for (majstat in majstat.unique){
     
     upstreamList <- list()
     for (item in names(megalist)) {
-    
+      
       finalList <- c()
       nextList  <- c()
       adjNodes  <- megalist[item][[1]]
       
       nextList <- c(nextList, adjNodes)
-  
+      
       while (length(nextList) != 0) {
         for (node in nextList) {
           #browser()
@@ -138,7 +140,7 @@ for (majstat in majstat.unique){
     accAQI <- sum(end.node$AQILength) / sum(end.node$StreamLength)
     
     accAQI.vec <- c(accAQI.vec,accAQI)
-  
+    
   }  # number of rows if statment
 }  # majstat for loop
 
@@ -147,9 +149,19 @@ names(accAQI.df) <- c("MAJORITY","accAQI")
 
 catch.df2 <- catch.df
 
-final.df <- merge(catch.df2, accAQI.df, by="MAJORITY")
+final.df <- merge(catch.df2, accAQI.df, by="MAJORITY", all=TRUE)
+# order by original spdf order
+final.df <- final.df[order(final.df$ID),]
 
+# add accAQI column to spatial polygons data frame
+shpfile@data$accAQI <- final.df$accAQI
 
+# writeOGR
+output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\upperBear_accAQI"
+output.name <- basename(output.path)
+output.dir <- dirname(output.path)
+
+writeOGR(shpfile, dsn = output.dir, layer = output.name, driver = "ESRI Shapefile", overwrite_layer = TRUE)
 
 
 
