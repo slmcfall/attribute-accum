@@ -4,3 +4,10 @@
 *.shx
 *.prj
 *.lock
+*.cpg
+*.xml
+*.sbx
+*.sbn
+*.tfw
+*.tif
+*.ovr

@@ -21,13 +21,16 @@ source(functions_path)
 #
 
 # load shapefile
-path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\acc_script\\huc12_upperBear_join"
+path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\huc12_upperBear_join3"
 shpfile <- loadShpfile(path)
 
 # convert to data frame
 catch.df <- as.data.frame(shpfile)
 
 catch.df$ID <- 1:nrow(catch.df)
+
+# rename a column
+# colnames(catch.df)[50] <- "WtStOr"
 
 # MAJSTAT STUFF
 # create list of majstat polygons to iterate over
@@ -84,7 +87,6 @@ for (majstat in majstat.unique){
           
           if (length(neighborNodes) != 0) {
             nextList <- c(nextList,neighborNodes)
-            
           }
         }
       }
@@ -157,7 +159,7 @@ final.df <- final.df[order(final.df$ID),]
 shpfile@data$accAQI <- final.df$accAQI
 
 # writeOGR
-output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\upperBear_accAQI"
+output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\johnDay_accAQI"
 output.name <- basename(output.path)
 output.dir <- dirname(output.path)
 
