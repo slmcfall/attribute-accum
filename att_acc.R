@@ -17,154 +17,166 @@ source(functions_path)
 ###          ###
 
 #
-# 1. Data Prep
+# 0. Data Parameters, Main call
 #
 
-# load shapefile
-path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\huc12_upperBear_join3"
-shpfile <- loadShpfile(path)
+input.path  <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\columbiaBasin\\huc12_edit_cB_join"
+output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\columbiaBasin_accAQI_main"
+HUC.col     <- "HUC12"
+ToHUC.col   <- "ToHUC"
+StrLen.col  <- "STRLEN"
+StrOrd.col  <- "STRORD"
+AQI.col     <- "AQI"
 
-# convert to data frame
-catch.df <- as.data.frame(shpfile)
+main(input.path, output.path, HUC.col, ToHUC.col, StrLen.col, StrOrd.col, AQI.col)
 
-catch.df$ID <- 1:nrow(catch.df)
-
-# rename a column
-# colnames(catch.df)[50] <- "WtStOr"
-
-# MAJSTAT STUFF
-# create list of majstat polygons to iterate over
-majstat.df <- catch.df[c("MAJORITY")]
-# get majstat list
-majstat.list <- as.list(majstat.df)[[1]]
-# remove repeated values
-majstat.unique <- unique(majstat.list)
-# remove null majstat groups
-majstat.unique <- majstat.unique[majstat.unique != 0]
-
-accAQI.vec <- c()
-majstat.vec <- c()
-
-for (majstat in majstat.unique){
+main <- function(input_path, output_path, HUC_col, ToHUC_col, StrLen_col, StrOrd_col, AQI_col) {
   
-  # get one majority stats group
-  catch.df.filter <- catch.df[catch.df$MAJORITY==majstat,]
-  nrows.filter <- nrow(catch.df.filter)
+  #
+  # 1. Data Prep
+  #
   
-  if (nrows.filter > 1) {
-    # add majstat category to vector list for final data frame
-    majstat.vec <- c(majstat.vec, majstat)
+  print ("1 | Loading and setting up data...")
+  
+  # load shapefile
+  # path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\huc12_lowerBear"
+  shpfile <- loadShpfile(input.path)
+  
+  # convert to data frame
+  catch.df <- as.data.frame(shpfile)
+  
+  # column creation
+  
+  # unique identifier
+  catch.df$ID <- 1:nrow(catch.df)
+  # stream length
+  if (is.null(catch.df$StrLen)) {
+    catch.df$StrLen <- catch.df[c(StrLen_col)]
+  }
+  # AQI
+  if (is.null(catch.df$AQI)) {
+    catch.df$AQI <- catch.df[c(AQI_col)]
+  }
+  # stream order
+  if (is.null(catch.df$StrOrd)) {
+    catch.df$StrOrd <- catch.df[c(StrOrd_col)]
+  }
+  # HUC
+  if (is.null(catch.df$UNIT)) {
+    catch.df$UNIT <- catch.df[c(HUC_col)]
+  }
+  # ToHUC
+  if (is.null(catch.df$ToUNIT)) {
+    catch.df$ToUNIT <- catch.df[c(ToHUC_col)]
+  }
+  
+  
+  #
+  # 2. Tree Creation
+  #
+  
+  print ("2 | Finding, connecting, compiling all upstreams nodes...")
+  print ("NOTE: this step takes the longest")
+  
+  # capture hydroid's, our iterator
+  hydroids <- getHydroIDs(catch.df, HUC_name = HUC_col)
+  
+  # create smaller df to pull from
+  bare.df <- createHUCdf(catch.df, HUC_name = HUC_col, ToHuc_name = ToHUC_col)
+  
+  # create list of all hydroids and their adjacent hydroids
+  megalist <- createAdjList(hydroids, bare.df)
+  
+  upstreamList <- list()
+  for (item in names(megalist)) {
     
-    # capture hydroid's, our iterator
-    hydroids <- getHydroIDs(catch.df.filter,"HUC12")
+    finalList <- c()
+    nextList  <- c()
+    adjNodes  <- megalist[item][[1]]
     
-    # create smaller df to pull from
-    bare.df <- createHUCdf(catch.df.filter, "HUC12", "ToHUC")
+    nextList <- c(nextList, adjNodes)
     
-    #
-    # 2. Tree Creation
-    #
-    
-    # create list of all hydroids and their adjacent hydroids
-    megalist <- createAdjList(hydroids)
-    
-    upstreamList <- list()
-    for (item in names(megalist)) {
-      
-      finalList <- c()
-      nextList  <- c()
-      adjNodes  <- megalist[item][[1]]
-      
-      nextList <- c(nextList, adjNodes)
-      
-      while (length(nextList) != 0) {
-        for (node in nextList) {
-          #browser()
-          neighborNodes <- megalist[toString(node)][[1]]
-          # remove node from nextList
-          finalList <- c(finalList, nextList[1])
-          nextList <- nextList[-1]
-          
-          if (length(neighborNodes) != 0) {
-            nextList <- c(nextList,neighborNodes)
-          }
-        }
-      }
-      
-      idname <- item
-      appList <- list(finalList)
-      names(appList) <- idname
-      upstreamList <- c(upstreamList, appList)
+    while (length(nextList) != 0) {
+      for (node in nextList) {
+        #browser()
+        neighborNodes <- megalist[toString(node)][[1]]
+        # remove node from nextList
+        finalList <- c(finalList, nextList[1])
+        nextList <- nextList[-1]
+        
+        if (length(neighborNodes) != 0) {
+          nextList <- c(nextList,neighborNodes)
+            }
+          }    
     }
+    #print (item)
+    idname <- item
+    appList <- list(finalList)
+    names(appList) <- idname
+    upstreamList <- c(upstreamList, appList)
+  }
+  
+  names(upstreamList) <- names(megalist)
+  
+  # add in original nodes for each node in upstreamList
+  allstreamList <- list()
+  index <- 1
+  for (node in upstreamList) {
+    origNode <- (names(upstreamList)[index])
+    node <- list(c(node, origNode))
+    allstreamList <- c(allstreamList,node)
+    index <- index + 1
+  }
+  
+  names(allstreamList) <- names(megalist)
+  
+  #
+  # 3. Connect Nodes to Data Frames
+  #
+  
+  print ("3 | Attaching connected nodes to appropriate data frames...")
+  
+  df.list <- list()
+  for (item in allstreamList) {
+    df.list <- c(df.list, list((catch.df[catch.df[c(HUC_col)][[1]] %in% item,])))
+  }
+  
+  # assign correct names
+  names(df.list) <- names(megalist)
+  
+  #
+  # 4. Calculate Accumulative AQI
+  #
+  
+  print ("4 | Calculating accumulation stats...")
+  
+  accAQI.vec <- c()
+  for (node in df.list) {
     
-    names(upstreamList) <- names(megalist)
+    numerator <- with(node, StrLen * AQI )#  * StrOrd)
+    denominator <- node[c(StrLen_col)]
     
-    # add in original nodes for each node in upstreamList
-    allstreamList <- list()
-    index <- 1
-    for (node in upstreamList) {
-      origNode <- (names(upstreamList)[index])
-      node <- list(c(node, origNode))
-      allstreamList <- c(allstreamList,node)
-      index <- index + 1
-    }
-    
-    #
-    # 3. Connect Nodes to Data Frames
-    #
-    
-    df.list <- list()
-    for (item in allstreamList) {
-      df.list <- c(df.list, list((catch.df.filter[catch.df.filter$HUC12 %in% item,])))
-    }
-    
-    # assign correct names
-    names(df.list) <- names(megalist)
-    
-    #
-    # 4. Calculate Accumulative AQI
-    #
-    
-    # find longest data frame in list of data frames
-    # this is the node that all nodes feed into, ostensibly
-    df.max <- findLongestDf(df.list)
-    
-    #end.node <- findLongestDf(df.list)
-    end.node <- df.max
-    
-    # !!! SUM is stream length in 30m cells!
-    # ...which means any diagonally connected cells aren't 1*30m but sqrt(2)*30m
-    # intermediate calculation for attribute accumulation
-    end.node$StreamLength <- end.node[c('SUM')]
-    end.node$AQI <- end.node[c('MEAN')]
-    end.node$AQILength <- with(end.node, StreamLength * AQI)
-    
-    accAQI <- sum(end.node$AQILength) / sum(end.node$StreamLength)
-    
-    accAQI.vec <- c(accAQI.vec,accAQI)
-    
-  }  # number of rows if statment
-}  # majstat for loop
-
-accAQI.df <- data.frame(majstat.vec,accAQI.vec)
-names(accAQI.df) <- c("MAJORITY","accAQI")
-
-catch.df2 <- catch.df
-
-final.df <- merge(catch.df2, accAQI.df, by="MAJORITY", all=TRUE)
-# order by original spdf order
-final.df <- final.df[order(final.df$ID),]
-
-# add accAQI column to spatial polygons data frame
-shpfile@data$accAQI <- final.df$accAQI
-
-# writeOGR
-output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\johnDay_accAQI"
-output.name <- basename(output.path)
-output.dir <- dirname(output.path)
-
-writeOGR(shpfile, dsn = output.dir, layer = output.name, driver = "ESRI Shapefile", overwrite_layer = TRUE)
-
-
+    accAQI <- sum(numerator) / sum(denominator)
+    accAQI.vec <- c(accAQI.vec, accAQI)
+  }
+  
+  catch.df$accAQInoStrOrd <- accAQI.vec
+  
+  # add accAQI column to spatial polygons data frame
+  shpfile@data$accAQIno<- catch.df$accAQInoStrOrd
+  
+  #
+  # 4. Calculate Accumulative AQI
+  #
+  
+  print ("5 | Writing new shapfile with accumulation stats...")
+  
+  # writeOGR
+  output.path <- output_path
+  output.name <- basename(output.path)
+  output.dir <- dirname(output.path)
+  
+  writeOGR(shpfile, dsn = output.dir, layer = output.name, driver = "ESRI Shapefile", overwrite_layer = TRUE)
+}
 
 

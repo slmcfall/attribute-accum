@@ -11,3 +11,8 @@
 *.tfw
 *.tif
 *.ovr
+.Rproj.user
+*.Rproj
+*.atx
+*.Rhistory
+*.RDataTmp
