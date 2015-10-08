@@ -36,7 +36,7 @@ createAdjList <- function(hydroIDs_list, bare_df) {
 connectNode <- function(id, bare_df) {
   
   idname <- toString(id)
-  nextdownids <- as.vector(bare_df[bare_df$ToHUC==id,]$HUC12)
+  nextdownids <- as.vector(bare_df[bare_df$DnHydroseq==id,]$Hydroseq)
   linkedlist <- list(nextdownids)
   names(linkedlist) <- idname
   
@@ -73,6 +73,7 @@ findLongestDf <- function(df_list) {
   }
   return (df.max)
 }
+
 
 input.path  <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\AEA\\archydro_example\\huc12_lowerBear"
 output.path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\attribute-accum\\johnDay_accAQI"

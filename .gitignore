@@ -16,3 +16,4 @@
 *.atx
 *.Rhistory
 *.RDataTmp
+*.RData*

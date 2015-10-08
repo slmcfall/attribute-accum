@@ -1,6 +1,6 @@
 
 # pull in data
-path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\columbiaBasin\\huc12_edit_cB_join"
+path <- "C:\\Users\\sean.mcfall\\Documents\\WRD\\california\\huc12_point"
 base <- basename(path)
 dir <- dirname(path)
 
