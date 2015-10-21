@@ -24,19 +24,20 @@ createHUCdf <- function(shpfile_df, HUC_name, ToHuc_name) {
   return(bare.df)
 }
 
-createAdjList <- function(hydroIDs_list, bare_df) {
+createAdjList <- function(hydroIDs_list, bare_df, hydro_id, down_id) {
   adj.list <- list()
   for (id in hydroIDs_list) {
-    node <- connectNode(id, bare_df)
+    node <- connectNode(id, bare_df, hydro_id, down_id)
     adj.list <- c(adj.list,node)
   }
   return(adj.list)
 }
-
-connectNode <- function(id, bare_df) {
+# bare.df[bare.df[,c(down)]==50009759,][,c(id)]   
+connectNode <- function(id, bare_df, hydro_id, down_id) {
   
   idname <- toString(id)
-  nextdownids <- as.vector(bare_df[bare_df$DnHydroseq==id,]$Hydroseq)
+  nextdownids <- as.vector(bare_df[bare_df[,c(down_id)]==id,][,c(hydro_id)])
+  #nextdownids <- as.vector(bare_df[bare_df$DnHydroseq==id,]$Hydroseq)
   linkedlist <- list(nextdownids)
   names(linkedlist) <- idname
   
